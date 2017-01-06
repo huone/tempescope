@@ -15,14 +15,15 @@ using namespace hu1;
 
 Tempescope* tempescope = NULL;
 
-HANDLE tempescopeServerThread, appServerThread;
-DWORD tempescopeServerThreadID, appServerThreadID;
+HANDLE tempescopeServerThread, appServerThread, httpClientThread;
+DWORD tempescopeServerThreadID, appServerThreadID, httpClientThreadID;
 
 HANDLE sendEvent;
 
 bool quit = false;
 char tsBuffer[512] = { 0, };
 char appDest[512] = { 0, };
+char httpBuffer[512] = { 0, };
 char keyBuffer[512] = { 0, };
 char* effect = NULL;
 
@@ -205,7 +206,7 @@ DWORD WINAPI AppServerMain(LPVOID param)
             SetEvent(sendEvent);
             break;
 
-         case 9000:
+         case 9001:
             effect = effectDemo;
             SetEvent(sendEvent);
             break;
@@ -216,6 +217,62 @@ DWORD WINAPI AppServerMain(LPVOID param)
          }
       }
    }
+
+   closesocket(hClntSock);
+
+   return 1;
+}
+
+char* httpReq[] = {
+   "GET /tempescope/set/effect?code=9001 HTTP/1.1\r\n",
+   "Host: 127.0.0.1\r\n",
+   "Connection: close\r\n\r\n"
+};
+
+char* ip = "127.0.0.1";
+
+DWORD WINAPI HttpClientMain(LPVOID param)
+{
+   SOCKET hClntSock;
+   SOCKADDR_IN servAddr;
+   struct hostent *server;
+   int szClntAddr;
+   int strLen;
+
+   hClntSock = socket(PF_INET, SOCK_STREAM, 0);
+   if (hClntSock == INVALID_SOCKET)
+   {
+      ErrorHandling("socket() error");
+   }
+
+   memset(&servAddr, 0, sizeof(servAddr));
+   servAddr.sin_family = AF_INET;
+   servAddr.sin_addr.s_addr = inet_addr(ip);//htonl(INADDR_ANY);
+   servAddr.sin_port = htons(3081);
+
+
+   if (connect(hClntSock, (SOCKADDR*)&servAddr, sizeof(servAddr)) == SOCKET_ERROR)
+   {
+      ErrorHandling("connect() error");
+   }
+
+   for (uint8 i = 0; i < 3; i++)
+   {
+      strLen = send(hClntSock, httpReq[i], strlen(httpReq[i]), 0);
+      if (strLen < 0)
+      {
+         ErrorHandling("send() error");
+      }
+   }
+
+   strLen = recv(hClntSock, httpBuffer, sizeof(httpBuffer)-1, 0);
+
+   if (strLen == -1)
+   {
+      ErrorHandling("read() error");
+   }
+
+   printf("http client received :\n%s\n", httpBuffer);
 
    closesocket(hClntSock);
 
@@ -239,6 +296,10 @@ int main(int argc, char** argv)
    appServerThread = CreateThread(NULL, 0, AppServerMain, NULL, CREATE_SUSPENDED, &appServerThreadID);
    SetThreadPriority(appServerThread, THREAD_PRIORITY_NORMAL);
    ResumeThread(appServerThread);
+
+   httpClientThread = CreateThread(NULL, 0, HttpClientMain, NULL, CREATE_SUSPENDED, &httpClientThreadID);
+   SetThreadPriority(httpClientThread, THREAD_PRIORITY_NORMAL);
+   ResumeThread(httpClientThread);
 
    while (!quit)
    {

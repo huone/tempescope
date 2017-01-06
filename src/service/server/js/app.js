@@ -2,9 +2,10 @@ var express = require("express");
 var path = require("path");
 var app = express();
 
-var data={count:0};
-
 app.set("view engine", 'ejs');
+
+/* request format reference
+var data={count:0};
 
 app.get('/', function(req, res){
   data.count++;
@@ -26,12 +27,61 @@ app.get('/set/:num', function(req, res){
   res.render('first', data);
 });
 
-app.get('/test', function(req, res){
-  res.send(data.count.toString());
-});
-
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(3000, function(){
+*/
+
+
+var tempescope = {effect_code : "9901"};
+
+var tempescope_effects = {
+  "1101" : {
+    name : "fine",
+    act:"BA0CFFFFFF003CP00H00",
+    next:"0000"
+  },
+  "1201" : {
+    name : "cloudy",
+    act:"B20C0000FF003CP00H01",
+    next:"0000"
+  },
+  "1301" : {
+    name : "rain",
+    act:"B40CFF0000003CP01H01",
+    next:"0000"
+  },
+  "9101" : {
+    name : "demo",
+    act:"CFFFFFF003CH01D02BCH00P01CFF00FF000FD0064C0000FF0F0FD0064CFFFF001E0FD0064C00FFFF2D0FP00D01F4CFFFFFF003CB10D0005B20D0005B30D0005B40D0005B50D0005B60D0005B70D0005B80D0005B90D0005BA0D0005B90D0005B80D0005B70D0005B60D0005B50D0005B40D0005B30D0005B20D0005R02",
+    next:"0000"
+  },
+  "9901" : {
+    name : "off",
+    act:"B00P00H00",
+    next:"0000"
+  }
+};
+
+app.get('/tempescope/set/effect', function(req, res){
+  console.log(req.url);
+
+  tempescope.effect_code = req.query.code;
+
+  res.render('rsp_msg', {msg:"OK"});
+});
+
+app.get('/tempescope/effect', function(req, res){
+  console.log(req.url);
+
+  var code = tempescope.effect_code;
+  var effect = tempescope_effects[code];
+
+  if(effect !== null)
+  {
+    res.render('rsp_effect',  {name:effect.name, code:code, act:effect.act, next:effect.next});
+  }
+});
+
+app.listen(3081, function(){
   console.log('Server On!');
 });
