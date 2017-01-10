@@ -368,7 +368,9 @@ class ESP8266 {
      * @return the length of data received actually. 
      */
     uint32_t recv(uint8_t *buffer, uint32_t buffer_size, uint32_t timeout = 1000);
-    
+
+	uint32_t recvEffect(uint8_t *buffer, uint32_t buffer_size, uint32_t timeout = 1000);
+
     /**
      * Receive data from one of TCP or UDP builded already in multiple mode. 
      *

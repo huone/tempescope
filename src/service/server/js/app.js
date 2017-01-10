@@ -59,6 +59,11 @@ var tempescope_effects = {
     name : "off",
     act:"B00P00H00",
     next:"0000"
+  },
+  "9911" : {
+    name : "error",
+    act:"B90CFF0000003CP00H00",
+    next:"0000"
   }
 };
 
@@ -73,13 +78,20 @@ app.get('/tempescope/set/effect', function(req, res){
 app.get('/tempescope/effect', function(req, res){
   console.log(req.url);
 
-  var code = tempescope.effect_code;
-  var effect = tempescope_effects[code];
-
-  if(effect !== null)
+  var code = req.query.code;
+  if(code === undefined)
   {
-    res.render('rsp_effect',  {name:effect.name, code:code, act:effect.act, next:effect.next});
+    code = tempescope.effect_code;
   }
+
+  var effect = tempescope_effects[code];
+  if(effect === undefined)
+  {
+    code = "9911";
+    effect = tempescope_effects[code];
+  }
+
+  res.render('rsp_effect',  {name:effect.name, code:code, act:effect.act, next:effect.next});
 });
 
 app.listen(3081, function(){

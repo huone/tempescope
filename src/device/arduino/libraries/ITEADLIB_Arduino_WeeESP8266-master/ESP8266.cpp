@@ -278,6 +278,107 @@ uint32_t ESP8266::recv(uint8_t *buffer, uint32_t buffer_size, uint32_t timeout)
     return recvPkg(buffer, buffer_size, NULL, timeout, NULL);
 }
 
+uint32_t ESP8266::recvEffect(uint8_t *buffer, uint32_t buffer_size, uint32_t timeout)
+{
+    String data;
+    char a;
+    int32_t index_PIPDcomma = -1;
+    int32_t index_colon = -1; /* : */
+    int32_t index_comma = -1; /* , */
+    int32_t len = -1;
+    int8_t id = -1;
+    bool has_data = false;
+    unsigned long start;
+    uint32_t i;
+
+    uint32_t matched_num = 0;
+    char* str_effect = "<act>";
+    bool found_effect = false;
+    bool skip_read = false;
+
+    if (buffer == NULL) {
+        return 0;
+    }
+
+    start = millis();
+    while (millis() - start < timeout) {
+        if(m_puart->available() > 0) {
+            a = m_puart->read();
+            data += a;
+        }
+        
+        index_PIPDcomma = data.indexOf("+IPD,");
+        if (index_PIPDcomma != -1) {
+            index_colon = data.indexOf(':', index_PIPDcomma + 5);
+            if (index_colon != -1) {
+                index_comma = data.indexOf(',', index_PIPDcomma + 5);
+                /* +IPD,id,len:data */
+                if (index_comma != -1 && index_comma < index_colon) { 
+                    id = data.substring(index_PIPDcomma + 5, index_comma).toInt();
+                    if (id < 0 || id > 4) {
+                        return 0;
+                    }
+                    len = data.substring(index_comma + 1, index_colon).toInt();
+                    if (len <= 0) {
+                        return 0;
+                    }
+                } else { /* +IPD,len:data */
+                    len = data.substring(index_PIPDcomma + 5, index_colon).toInt();
+                    if (len <= 0) {
+                        return 0;
+                    }
+                }
+                has_data = true;
+                break;
+            }
+        }
+    }
+    
+    if (has_data) {
+        i = 0;
+        start = millis();
+        while (millis() - start < 3000) {
+            while(m_puart->available() > 0) {
+                a = m_puart->read();
+
+                if(!skip_read)
+                {
+                  if(!found_effect)
+                  {
+                    if(a == *(str_effect + matched_num))
+                    {
+                      matched_num++;
+                      if(matched_num == strlen(str_effect))
+                      {
+                        found_effect = true;
+                      }
+                    }
+                    else
+                    {
+                      matched_num = 0;
+                    }
+                  }
+                  else if(found_effect)
+                  {
+                    if(i < buffer_size && a != '<')
+                    {
+                      buffer[i++] = a;
+                    }
+                    else
+                    {
+                      skip_read = true;
+                    }
+                  }
+                }
+            }
+        }
+
+        return i;
+    }
+
+    return 0;
+}
+
 uint32_t ESP8266::recv(uint8_t mux_id, uint8_t *buffer, uint32_t buffer_size, uint32_t timeout)
 {
     uint8_t id;

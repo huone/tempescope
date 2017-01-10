@@ -51,7 +51,7 @@ struct ParserMap
 bool wifiReady = false;
 
 uint8_t effectRepeat = 0;
-uint8_t buffer[450] = {0,};
+uint8_t  buffer[450] = {0,};
 
 Adafruit_NeoPixel strip(CNT_LED, PIN_LED, NEO_GRB + NEO_KHZ800);
 SoftwareSerial wifiSerial(11, 10); //RX 11, TX 10
@@ -119,7 +119,6 @@ void setup(void)
 
 void loop(void)  
 { 
-  char* msg = NULL;
   int32_t len = 0, i;
   uint8_t done = 0;
 
@@ -129,46 +128,34 @@ void loop(void)
     { 
       printLog("Create TCP OK");  
       wifi.send(httpReq, strlen(httpReq));
-      
-      len = wifi.recv(buffer, sizeof(buffer) - 1, 1000);
-      buffer[len - 1] = 0;
-      
+
+      len = wifi.recvEffect(buffer, sizeof(buffer) - 1, 3000);
+
       if (len > 0) 
       {
         printLog("Received:[", false);
         printLogN((char*)buffer, (uint32_t)len);
         printLog("]");
-        
-        msg = strstr((char*)buffer, "<act>") + 5;
 
-        if(msg != NULL)
+        do
         {
-          len = (int32_t)(strstr((char*)msg, "</act>") - msg);
+          i = 0;
           
-          if (len > 0)
+          while (i < len)
           {
-            do
+            for (uint8_t j = 0; j < CNT_PARSER; j++)
             {
-              i = 0;
-              
-              while (i < len)
+              if (buffer[i] == parserMap[j].idChar)
               {
-                for (uint8_t j = 0; j < CNT_PARSER; j++)
-                {
-                  if (msg[i] == parserMap[j].idChar)
-                  {
-                    i += parserMap[j].parser((void*)&msg[i + 1]);
-                    break;
-                  }
-                }
-                i++;
+                i += parserMap[j].parser((void*)&buffer[i + 1]);
+                break;
               }
-              done++;
-            } while (effectRepeat - (done - 1) > 0);
+            }
+            i++;
           }
-        }
+          done++;
+        } while (effectRepeat - (done - 1) > 0);
       }
-      
       wifi.releaseTCP();
     } 
     else 
@@ -176,8 +163,8 @@ void loop(void)
       printLog("Create TCP ERROR");
     }
   }
-    
-    delay(10000);
+
+  delay(10000);
 } 
 
 void setupLog()
