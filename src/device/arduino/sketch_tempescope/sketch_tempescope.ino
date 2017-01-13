@@ -1,4 +1,4 @@
-#define LOG_SERIAL
+//#define LOG_SERIAL
 
 #include <Adafruit_NeoPixel.h>
 #include <ESP8266.h>
@@ -16,8 +16,10 @@
 #define PASSWORD    "hu1huone@" //"hu1huone@"       //"h123456."
 #define HOST_NAME   "192.168.124.23" //"192.168.124.23"  //"192.168.0.151"
 #define HOST_PORT   3081
+#define ID          "p001"
 
-char* httpReq = "GET /tempescope/p001/effects/%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n";
+char* httpReq = "GET /tempescopes/%s/%s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n";
+bool hasNextEffect = false;
 
 void setupLog();
 void printLog(char* msg, bool newline = true);
@@ -34,12 +36,10 @@ uint32_t parseHumidifier(void* msg);
 uint32_t parseDelay(void* msg);
 uint32_t parseRepeat(void* msg);
 
-struct ParserMap 
-{
+struct ParserMap {
   char idChar;
   parser_t parser;
-} parserMap[CNT_PARSER] = 
-{
+} parserMap[CNT_PARSER] = {
   {'C', parseColor},
   {'B', parseBrightness},
   {'P', parsePump},
@@ -51,7 +51,7 @@ struct ParserMap
 bool wifiReady = false;
 
 uint8_t effectRepeat = 0;
-uint8_t buf[480] = {'0','0','0','0',0,};
+uint8_t buf[420] = {'0','0','0','0',0,};
 uint8_t* code_buf = buf;
 uint8_t* msg_buf = buf + 5;
 
@@ -59,8 +59,7 @@ Adafruit_NeoPixel strip(CNT_LED, PIN_LED, NEO_GRB + NEO_KHZ800);
 SoftwareSerial wifiSerial(11, 10); //RX 11, TX 10
 ESP8266 wifi(wifiSerial);
 
-void setup(void)  
-{
+void setup(void){
   setupLog();
   printLog("===== Begin Setup =====");
   
@@ -69,8 +68,7 @@ void setup(void)
   
   strip.begin();
 
-  for (uint8_t i = 0; i < CNT_LED; i++)
-  {
+  for(uint8_t i = 0; i < CNT_LED; i++){
     strip.setBrightness(64);
     strip.setPixelColor(i, 0xFF, 0xFF, 0xFF);
     strip.show();
@@ -84,80 +82,67 @@ void setup(void)
   printLog(" - FW Version:", false);  
   printLog(wifi.getVersion().c_str());  
   
-  if (wifi.setOprToStation())
-  {  
+  if(wifi.setOprToStation()){  
     printLog(" - To station OK");
-  } 
-  else 
-  {  
+  } else {  
     printLog(" - To station ERROR");  
   }  
   
-  if (wifi.joinAP(SSID, PASSWORD)) 
-  {  
+  if(wifi.joinAP(SSID, PASSWORD)){  
     printLog(" - Join AP success");  
     printLog(" - IP : [", false);
     printLog( wifi.getLocalIP().c_str(), false);
     printLog("]"); 
     
     wifiReady = true;     
-  } 
-  else 
-  {  
+  } else {  
     printLog(" - Join AP failure");  
   }  
   
-  if (wifi.disableMUX()) 
-  {  
+  if (wifi.disableMUX()){  
     printLog(" - Single mode OK");  
-  } 
-  else 
-  { 
+  } else { 
     printLog(" - Single mode ERROR");  
   }  
   
   printLog("===== Setup End =====");  
 }  
 
-void loop(void)  
-{ 
+void loop(void){ 
   int32_t len = 0, i;
   uint8_t done = 0;
 
-  if (wifiReady)
-  {
-    if (wifi.createTCP(HOST_NAME, HOST_PORT)) 
-    { 
+  if(wifiReady){
+    if(wifi.createTCP(HOST_NAME, HOST_PORT)){ 
       printLog("Create TCP OK");
-      sprintf(msg_buf, httpReq, code_buf, HOST_NAME);
+      
+      if(hasNextEffect){
+        sprintf(msg_buf, httpReq, ID, "effects/", code_buf, HOST_NAME);
+      } else {
+        sprintf(msg_buf, httpReq, ID, "effect", "", HOST_NAME);
+      }
+      
       wifi.send(msg_buf, strlen(msg_buf));
-#if 1
-      //len = wifi.recv(msg_buf, sizeof(buf) - 6, 3000);
-      len = wifi.recvEffect(buf, sizeof(buf) - 1, 3000);
-      if (len > 0) 
-      {
+#if 0
+      len = wifi.recv(msg_buf, sizeof(buf) - 6, 3000);
+      if(len > 0){
         printLog("Received:[", false);
         printLogN((char*)buf, (uint32_t)len + 5);
         printLog("]");
       }
 #else
       len = wifi.recvEffect(buf, sizeof(buf) - 1, 3000);
-      if (len > 0)
-      {
+      if(len > 0){
         printLog("Received:[", false);
         printLogN((char*)buf, (uint32_t)len + 5);
         printLog("]");
 
-        do
-        {
+        do {
           i = 0;
           
-          while (i < len)
-          {
-            for (uint8_t j = 0; j < CNT_PARSER; j++)
-            {
-              if (msg_buf[i] == parserMap[j].idChar)
-              {
+          while(i < len){
+            for(uint8_t j = 0; j < CNT_PARSER; j++){
+              if (msg_buf[i] == parserMap[j].idChar){
                 i += parserMap[j].parser((void*)&msg_buf[i + 1]);
                 break;
               }
@@ -165,47 +150,44 @@ void loop(void)
             i++;
           }
           done++;
-        } while (effectRepeat - (done - 1) > 0);
+        } while(effectRepeat - (done - 1) > 0);
       }
  #endif
       wifi.releaseTCP();
-    } 
-    else 
-    {  
+    } else {  
       printLog("Create TCP ERROR");
     }
   }
 
   if(strncmp(code_buf, "0000", 4) == 0)
   {
+    hasNextEffect = false;
+    
     printLog("delay 10sec");
     delay(10000);
+  } else {
+    hasNextEffect = true;
   }
 } 
 
-void setupLog()
-{
+void setupLog(){
 #ifdef LOG_SERIAL
   Serial.begin(9600);
 #endif
 }
 
-void printLog(char* msg, bool newline = true)
-{
+void printLog(char* msg, bool newline = true){
 #ifdef LOG_SERIAL
   Serial.print(msg);
-  if (newline)
-  {
+  if(newline){
     Serial.print("\r\n");
   }
 #endif
 }
 
-void printLogN(char* msg, uint32_t len)
-{
+void printLogN(char* msg, uint32_t len){
 #ifdef LOG_SERIAL
-  for (uint32_t i = 0; i < len; i++)
-  {
+  for(uint32_t i = 0; i < len; i++){
     Serial.print((char)msg[i]);
   }
 #endif
@@ -216,17 +198,13 @@ uint32_t parseHexStr(const char** str, uint8_t digit)
   uint32_t c, m, v = 0;
   float e = 0.01f;
   
-  for (uint8_t i = 0; i < digit; i++)
-  {
+  for(uint8_t i = 0; i < digit; i++){
     c = (*str)[i];
     m = (uint32_t)(pow(2, 4 * (digit - 1 - i)) + e);
     
-    if (c >= '0' && c <= '9')
-    {
+    if(c >= '0' && c <= '9'){
       v += (c - '0') *  m;
-    }
-    else if (c >= 'A' && c <= 'F')
-    {
+    } else if(c >= 'A' && c <= 'F'){
       v += ((c - 'A') + 10) * m;
     }
   }
@@ -236,8 +214,7 @@ uint32_t parseHexStr(const char** str, uint8_t digit)
   return v;
 }
 
-uint32_t parseColor(void* msg)
-{
+uint32_t parseColor(void* msg){
   static uint8_t LEN_MSG = 10;
   
   const char* p = (const char*)msg;
@@ -249,8 +226,7 @@ uint32_t parseColor(void* msg)
 
   printLog("parseColor()");
 
-  for (uint8_t i = 0; i < c; i++)
-  {
+  for(uint8_t i = 0; i < c; i++){
     strip.setPixelColor(i + s, r, g, b);
   }
   
@@ -259,8 +235,7 @@ uint32_t parseColor(void* msg)
   return LEN_MSG;
 }
 
-uint32_t parseBrightness(void* msg)
-{
+uint32_t parseBrightness(void* msg){
   static uint8_t LEN_MSG = 2;
   
   const char* p = (const char*)msg;
@@ -274,8 +249,7 @@ uint32_t parseBrightness(void* msg)
   return LEN_MSG;
 }
 
-uint32_t parsePump(void* msg)
-{
+uint32_t parsePump(void* msg){
   static uint8_t LEN_MSG = 2;
   
   const char* p = (const char*)msg;
@@ -288,8 +262,7 @@ uint32_t parsePump(void* msg)
   return LEN_MSG;
 }
 
-uint32_t parseHumidifier(void* msg)
-{
+uint32_t parseHumidifier(void* msg){
   static uint8_t LEN_MSG = 2;
   
   const char* p = (const char*)msg;
@@ -302,8 +275,7 @@ uint32_t parseHumidifier(void* msg)
   return LEN_MSG;
 }
 
-uint32_t parseDelay(void* msg)
-{
+uint32_t parseDelay(void* msg){
   static uint8_t LEN_MSG = 4;
   
   const char* p = (const char*)msg;
@@ -316,8 +288,7 @@ uint32_t parseDelay(void* msg)
   return LEN_MSG;
 }
 
-uint32_t parseRepeat(void* msg)
-{
+uint32_t parseRepeat(void* msg){
   static uint8_t LEN_MSG = 2;
   
   const char* p = (const char*)msg;

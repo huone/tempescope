@@ -287,53 +287,51 @@ uint32_t ESP8266::recvEffect(uint8_t *buffer, uint32_t buffer_size, uint32_t tim
     int32_t index_comma = -1; /* , */
     int32_t len = -1;
     int8_t id = -1;
+    
     bool has_data = false;
     unsigned long start;
     uint32_t i, ret = 0;
 
-    uint8_t* next_buf = buffer;
-    uint8_t* effect_buf = buffer + 5;
-    uint32_t effect_buf_size = buffer_size - 5;
+    uint8_t* buf = buffer + 5;
+    uint32_t buf_size = buffer_size - 5;
 
-    uint32_t matched_num = 0;
-    char* str_next = "next";
-    char* str_effect = "act";
-    bool found_next = false;
-    bool begin_next = false;
-    bool complete_next = false;
-    bool found_effect = false;
-    bool begin_effect = false;
-    bool complete_effect = false;
+    char* key = "act";
+    char* key_next = "next";
     
-    if (buffer == NULL) {
-        buffer_size = 0;
+    uint8_t matched_num = 0;
+    uint8_t complete_num = 0;
+    
+    bool begin_value = 0;
+    
+    if(buffer == NULL || buffer_size < 5){
+        return 0;
     }
 
     start = millis();
-    while (millis() - start < timeout) {
-        if(m_puart->available() > 0) {
+    while(millis() - start < timeout){
+        if(m_puart->available() > 0){
             a = m_puart->read();
             data += a;
         }
         
         index_PIPDcomma = data.indexOf("+IPD,");
-        if (index_PIPDcomma != -1) {
+        if(index_PIPDcomma != -1){
             index_colon = data.indexOf(':', index_PIPDcomma + 5);
-            if (index_colon != -1) {
+            if(index_colon != -1){
                 index_comma = data.indexOf(',', index_PIPDcomma + 5);
                 /* +IPD,id,len:data */
-                if (index_comma != -1 && index_comma < index_colon) { 
+                if(index_comma != -1 && index_comma < index_colon){ 
                     id = data.substring(index_PIPDcomma + 5, index_comma).toInt();
-                    if (id < 0 || id > 4) {
+                    if(id < 0 || id > 4){
                         return 0;
                     }
                     len = data.substring(index_comma + 1, index_colon).toInt();
-                    if (len <= 0) {
+                    if(len <= 0){
                         return 0;
                     }
                 } else { /* +IPD,len:data */
                     len = data.substring(index_PIPDcomma + 5, index_colon).toInt();
-                    if (len <= 0) {
+                    if(len <= 0){
                         return 0;
                     }
                 }
@@ -343,97 +341,50 @@ uint32_t ESP8266::recvEffect(uint8_t *buffer, uint32_t buffer_size, uint32_t tim
         }
     }
 
-    if (has_data) {
-        i = 0;
-        start = millis();
-        while (millis() - start < 3000) {
-            while(m_puart->available() > 0) {
-                a = m_puart->read();
+    if(has_data){
+      start = millis();
+      while(millis() - start < 3000){
+        while(m_puart->available() > 0){
+          a = m_puart->read();
 
-                if(!complete_next)
-                {
-                  if(!found_effect)
-                  {
-                    if(a == *(str_next + matched_num))
-                    {
-                      found_next = true;
-                      matched_num++;
-                      if(matched_num == strlen(str_next))
-                      {
-                        begin_next = true;
-                      }
-                    }
-                    else
-                    {
-                      found_next = false;
-                      matched_num = 0;
-                    }
-                  }
-
-                  if(begin_next)
-                  {
-                    if(buffer_size > 5)
-                    {
-                      if(i < 4 && a >= '0' && a <= '9')
-                      {
-                        next_buf[i++] = a;
-                      }
-                      else
-                      {
-                        found_next = false;
-                        complete_next = true;
-                        i = 0;
-                      }
-                    }
-                  }
+          if(complete_num < 2){
+            if(begin_value){
+              if(matched_num < 3){
+                if(a == '\"'){
+                  matched_num++;
+                } else if(i < buf_size && a != ' ' && a != ':' && a != ","){
+                  buf[i++] = a;
                 }
+              } else {
+                complete_num++;
+                
+                buf = buffer;
+                buf_size = 4;
+                key = key_next;
 
-                if(!complete_effect)
-                {
-                  if(!found_next)
-                  {
-                    if(a == *(str_effect + matched_num))
-                    {
-                      found_effect = true;
-                      matched_num++;
-                      if(matched_num == strlen(str_effect))
-                      {
-                        begin_effect = true;
-                      }
-                    }
-                    else
-                    {
-                      found_effect = false;
-                      matched_num = 0;
-                    }
-                  }
-
-                  if(begin_effect)
-                  {
-                    if(buffer_size > 5)
-                    {
-                      if(i < effect_buf_size && a != '<' && a != ',')
-                      {
-                        if(a != ' ' && a != ':' && a != '>' && a != '\'' && a != '\"' && a != '\n')
-                        {
-                          effect_buf[i++] = a;
-                        }
-                      }
-                      else
-                      {
-                        found_effect = false;
-                        complete_effect = true;
-                        ret = i;
-                        i = 0;
-                      }
-                    }
-                  }
+                begin_value = false;
+                matched_num = 0;
+              }
+            } else {
+              if(a == *(key + matched_num)){
+                if(++matched_num == strlen(key)){
+                  begin_value = true;
+                  matched_num = 0;
+                  
+                  ret = i;
+                  i = 0;
                 }
+              } else {
+                matched_num = 0;
+              }
             }
+          }
         }
+      }
 
-        return ret;
+      return ret;
     }
+    
     return 0;
 }
 
