@@ -1,8 +1,27 @@
-var express = require("express");
+var express = require('express');
+var json = require('express-json');
 var path = require("path");
 var app = express();
 
 app.set("view engine", 'ejs');
+
+app.use(json());
+
+/*
+app.use(function(req, res, next){
+    var oldRender = res.render;
+    res.render = function(){
+        res.header('Content-Type', 'text/plain');
+        oldRender.apply(this, arguments);
+    };
+
+    next();
+});
+*/
+
+function LOG(o){
+  console.log(o);
+}
 
 /* request format reference
 var data={count:0};
@@ -32,7 +51,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 */
 
 
-var tempescope = {effect_code : "9901"};
 
 var tempescope_effects = {
   "1101" : {
@@ -67,32 +85,129 @@ var tempescope_effects = {
   }
 };
 
-app.get('/tempescope/set/effect', function(req, res){
-  console.log(req.url);
+var tempescopes = {
+  "20161201-0" : {effect_code : "1101", effect:tempescope_effects},
+  "20161201-1" : {effect_code : "1101", effect:{}},
+  "20161201-2" : {effect_code : "1101", effect:{}}
+};
 
-  tempescope.effect_code = req.query.code;
+tempescopes.global = tempescopes["20161201-0"];
+tempescopes.p001 = tempescopes["20161201-1"];
+tempescopes.p002 = tempescopes["20161201-2"];
+
+app.get('/tempescopes/:id/effects/:code', function(req, res){
+  LOG(req.url);
+
+  var id = req.params.id;
+  var code = req.params.code;
+
+  var effect;
+  var tempescope = tempescopes[id];
+
+  if(tempescope === undefined)
+  {
+    code = "9901";
+    effect = tempescopes.global.effect[code];
+  }
+  else {
+    effect = tempescope.effect[code];
+    if(effect === undefined)
+    {
+      effect = tempescopes.global.effect[code];
+      if(effect === undefined)
+      {
+        code = "9901";
+        effect = tempescopes.global.effect[code];
+      }
+    }
+  }
+
+  res.setHeader('Content-Type', 'text/plain')
+  res.render('rsp_effect', {name:effect.name, code:code, act:effect.act, next:effect.next});
+});
+
+app.get('/tempescopes/:id/effect', function(req, res){
+  LOG(req.url);
+
+  var id = req.params.id;
+  var code;
+
+  var effect;
+  var tempescope = tempescopes[id];
+
+  if(tempescope === undefined)
+  {
+    code = "9901";
+    effect = tempescopes.global.effect[code];
+  }
+  else {
+    code = tempescope.effect_code;
+    effect = tempescope.effect[code];
+    if(effect === undefined)
+    {
+      effect = tempescopes.global.effect[code];
+      if(effect === undefined)
+      {
+        code = "9901";
+        effect = tempescopes.global.effect[code];
+      }
+    }
+  }
+
+  res.setHeader('Content-Type', 'text/plain')
+  res.render('rsp_effect', {name:effect.name, code:code, act:effect.act, next:effect.next});
+});
+
+app.get('/tempescope/effect', function(req, res){
+  LOG(req.url);
+
+  var code = tempescopes.global.effect_code;
+  var effect = tempescopes.global.effect[code];
+  if(effect === undefined)
+  {
+    code = "9901";
+    effect = tempescopes.global.effect[code];
+  }
+
+  res.setHeader('Content-Type', 'text/plain')
+  res.render('rsp_effect', {name:effect.name, code:code, act:effect.act, next:effect.next});
+});
+
+app.post('/tempescope/add/effect', function(req, res){
+  LOG(req.url);
+
+  var effect_code = req.body.code;
+  var effect = tempescope_effects[effect_code];
+  if(effect_code === undefined || effect !== undefined)
+  {
+    res.render('rsp_msg', {msg:"ERROR"});
+    return;
+  }
+
+  var effect_name = req.body.name;
+  if(effect_name === undefined)
+  {
+    effect_name = "User effect";
+  }
+
+  var effect_act = req.body.act;
+  if(effect_act === undefined)
+  {
+    effect_act = "B90CFF0000003CP00H00";
+  }
+
+  var effect_next = req.body.next;
+  if(effect_next === undefined)
+  {
+    effect_next = "0000";
+  }
+
+  tempescope_effects[code] = {name:effect_name, act:effect_act, next:effect_next};
 
   res.render('rsp_msg', {msg:"OK"});
 });
 
-app.get('/tempescope/effect', function(req, res){
-  console.log(req.url);
-
-  var code = req.query.code;
-  if(code === undefined)
-  {
-    code = tempescope.effect_code;
-  }
-
-  var effect = tempescope_effects[code];
-  if(effect === undefined)
-  {
-    code = "9911";
-    effect = tempescope_effects[code];
-  }
-
-  res.render('rsp_effect',  {name:effect.name, code:code, act:effect.act, next:effect.next});
-});
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(3081, function(){
   console.log('Server On!');

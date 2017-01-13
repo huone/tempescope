@@ -289,15 +289,24 @@ uint32_t ESP8266::recvEffect(uint8_t *buffer, uint32_t buffer_size, uint32_t tim
     int8_t id = -1;
     bool has_data = false;
     unsigned long start;
-    uint32_t i;
+    uint32_t i, ret = 0;
+
+    uint8_t* next_buf = buffer;
+    uint8_t* effect_buf = buffer + 5;
+    uint32_t effect_buf_size = buffer_size - 5;
 
     uint32_t matched_num = 0;
-    char* str_effect = "<act>";
+    char* str_next = "next";
+    char* str_effect = "act";
+    bool found_next = false;
+    bool begin_next = false;
+    bool complete_next = false;
     bool found_effect = false;
-    bool skip_read = false;
-
+    bool begin_effect = false;
+    bool complete_effect = false;
+    
     if (buffer == NULL) {
-        return 0;
+        buffer_size = 0;
     }
 
     start = millis();
@@ -333,7 +342,7 @@ uint32_t ESP8266::recvEffect(uint8_t *buffer, uint32_t buffer_size, uint32_t tim
             }
         }
     }
-    
+
     if (has_data) {
         i = 0;
         start = millis();
@@ -341,41 +350,90 @@ uint32_t ESP8266::recvEffect(uint8_t *buffer, uint32_t buffer_size, uint32_t tim
             while(m_puart->available() > 0) {
                 a = m_puart->read();
 
-                if(!skip_read)
+                if(!complete_next)
                 {
                   if(!found_effect)
                   {
-                    if(a == *(str_effect + matched_num))
+                    if(a == *(str_next + matched_num))
                     {
+                      found_next = true;
                       matched_num++;
-                      if(matched_num == strlen(str_effect))
+                      if(matched_num == strlen(str_next))
                       {
-                        found_effect = true;
+                        begin_next = true;
                       }
                     }
                     else
                     {
+                      found_next = false;
                       matched_num = 0;
                     }
                   }
-                  else if(found_effect)
+
+                  if(begin_next)
                   {
-                    if(i < buffer_size && a != '<')
+                    if(buffer_size > 5)
                     {
-                      buffer[i++] = a;
+                      if(i < 4 && a >= '0' && a <= '9')
+                      {
+                        next_buf[i++] = a;
+                      }
+                      else
+                      {
+                        found_next = false;
+                        complete_next = true;
+                        i = 0;
+                      }
+                    }
+                  }
+                }
+
+                if(!complete_effect)
+                {
+                  if(!found_next)
+                  {
+                    if(a == *(str_effect + matched_num))
+                    {
+                      found_effect = true;
+                      matched_num++;
+                      if(matched_num == strlen(str_effect))
+                      {
+                        begin_effect = true;
+                      }
                     }
                     else
                     {
-                      skip_read = true;
+                      found_effect = false;
+                      matched_num = 0;
+                    }
+                  }
+
+                  if(begin_effect)
+                  {
+                    if(buffer_size > 5)
+                    {
+                      if(i < effect_buf_size && a != '<' && a != ',')
+                      {
+                        if(a != ' ' && a != ':' && a != '>' && a != '\'' && a != '\"' && a != '\n')
+                        {
+                          effect_buf[i++] = a;
+                        }
+                      }
+                      else
+                      {
+                        found_effect = false;
+                        complete_effect = true;
+                        ret = i;
+                        i = 0;
+                      }
                     }
                   }
                 }
             }
         }
 
-        return i;
+        return ret;
     }
-
     return 0;
 }
 

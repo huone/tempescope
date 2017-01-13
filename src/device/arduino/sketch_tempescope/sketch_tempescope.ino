@@ -17,7 +17,7 @@
 #define HOST_NAME   "192.168.124.23" //"192.168.124.23"  //"192.168.0.151"
 #define HOST_PORT   3081
 
-char* httpReq = "GET /tempescope/effect HTTP/1.1\r\nHost: 192.168.124.23\r\nConnection: close\r\n\r\n";
+char* httpReq = "GET /tempescope/p001/effects/%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n";
 
 void setupLog();
 void printLog(char* msg, bool newline = true);
@@ -51,7 +51,9 @@ struct ParserMap
 bool wifiReady = false;
 
 uint8_t effectRepeat = 0;
-uint8_t  buffer[450] = {0,};
+uint8_t buf[480] = {'0','0','0','0',0,};
+uint8_t* code_buf = buf;
+uint8_t* msg_buf = buf + 5;
 
 Adafruit_NeoPixel strip(CNT_LED, PIN_LED, NEO_GRB + NEO_KHZ800);
 SoftwareSerial wifiSerial(11, 10); //RX 11, TX 10
@@ -126,15 +128,24 @@ void loop(void)
   {
     if (wifi.createTCP(HOST_NAME, HOST_PORT)) 
     { 
-      printLog("Create TCP OK");  
-      wifi.send(httpReq, strlen(httpReq));
-
-      len = wifi.recvEffect(buffer, sizeof(buffer) - 1, 3000);
-
+      printLog("Create TCP OK");
+      sprintf(msg_buf, httpReq, code_buf, HOST_NAME);
+      wifi.send(msg_buf, strlen(msg_buf));
+#if 1
+      //len = wifi.recv(msg_buf, sizeof(buf) - 6, 3000);
+      len = wifi.recvEffect(buf, sizeof(buf) - 1, 3000);
       if (len > 0) 
       {
         printLog("Received:[", false);
-        printLogN((char*)buffer, (uint32_t)len);
+        printLogN((char*)buf, (uint32_t)len + 5);
+        printLog("]");
+      }
+#else
+      len = wifi.recvEffect(buf, sizeof(buf) - 1, 3000);
+      if (len > 0)
+      {
+        printLog("Received:[", false);
+        printLogN((char*)buf, (uint32_t)len + 5);
         printLog("]");
 
         do
@@ -145,9 +156,9 @@ void loop(void)
           {
             for (uint8_t j = 0; j < CNT_PARSER; j++)
             {
-              if (buffer[i] == parserMap[j].idChar)
+              if (msg_buf[i] == parserMap[j].idChar)
               {
-                i += parserMap[j].parser((void*)&buffer[i + 1]);
+                i += parserMap[j].parser((void*)&msg_buf[i + 1]);
                 break;
               }
             }
@@ -156,6 +167,7 @@ void loop(void)
           done++;
         } while (effectRepeat - (done - 1) > 0);
       }
+ #endif
       wifi.releaseTCP();
     } 
     else 
@@ -164,7 +176,11 @@ void loop(void)
     }
   }
 
-  delay(10000);
+  if(strncmp(code_buf, "0000", 4) == 0)
+  {
+    printLog("delay 10sec");
+    delay(10000);
+  }
 } 
 
 void setupLog()
