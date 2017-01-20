@@ -3,29 +3,40 @@
   <head>
     <meta charset="utf-8">
     <title>Tempescope add effect</title>
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="json_post.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function(){
+        $("#sendToJson").click(function(){
+          $("#effect_add_form").jsonPost("/tempescope/effect/add").done(function(data){
+            alert("Result from server : " + JSON.stringify(data));
+          });
+        });
+      });
+    </script>
   </head>
   <body>
+    <form id="effect_add_form">
     <table>
-    <form action="/tempescope/effect/add" method="post">
       <tr>
-        <td>code</td><td><input type="text" name="id" size="20" value="global"/></td>
+        <td>code</td><td><input type="text" id="id" name="id" size="20" value="global"/></td>
       </tr>
       <tr>
-        <td>code</td><td><input type="text" name="code" size="20" /></td>
+        <td>code</td><td><input type="text" id="code" name="code" size="20" /></td>
       </tr>
       <tr>
-        <td>name</td><td><input type="text" name="name" size="20" /></td>
+        <td>name</td><td><input type="text" id="name" name="name" size="20" /></td>
       </tr>
       <tr>
-        <td>act</td><td><input type="text" name="act" size="100" /></td>
+        <td>act</td><td><input type="text" id="act" name="act" size="100" /></td>
       </tr>
       <tr>
-        <td>next</td><td><input type="text" name="next" size="20" /></td>
+        <td>next</td><td><input type="text" id="next" name="next" size="20" /></td>
       </tr>
       <tr>
-        <td colspan="2" align="center"><input type="submit" value="submit" /></td>
+        <td colspan="2" align="center"><input type="button" id="sendToJson" value="submit to json"/></td>
       </tr>
-    </form>
     </table>
+    </form>
   </body>
 </html>

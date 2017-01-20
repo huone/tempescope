@@ -1,4 +1,4 @@
-//#define LOG_SERIAL
+#define LOG_SERIAL
 
 #include <Adafruit_NeoPixel.h>
 #include <ESP8266.h>

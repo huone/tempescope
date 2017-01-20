@@ -58,7 +58,7 @@ DWORD WINAPI TempescopeServerMain(LPVOID param)
    memset(&servAddr, 0, sizeof(servAddr));
    servAddr.sin_family = AF_INET;
    servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-   servAddr.sin_port = htons(81);
+   servAddr.sin_port = htons(3081);
 
    if (bind(hServSock, (SOCKADDR*)&servAddr, sizeof(servAddr)) == SOCKET_ERROR)
    {
@@ -293,13 +293,13 @@ int main(int argc, char** argv)
    SetThreadPriority(tempescopeServerThread, THREAD_PRIORITY_NORMAL);
    ResumeThread(tempescopeServerThread);
 
-   appServerThread = CreateThread(NULL, 0, AppServerMain, NULL, CREATE_SUSPENDED, &appServerThreadID);
-   SetThreadPriority(appServerThread, THREAD_PRIORITY_NORMAL);
-   ResumeThread(appServerThread);
+   //appServerThread = CreateThread(NULL, 0, AppServerMain, NULL, CREATE_SUSPENDED, &appServerThreadID);
+   //SetThreadPriority(appServerThread, THREAD_PRIORITY_NORMAL);
+   //ResumeThread(appServerThread);
 
-   httpClientThread = CreateThread(NULL, 0, HttpClientMain, NULL, CREATE_SUSPENDED, &httpClientThreadID);
-   SetThreadPriority(httpClientThread, THREAD_PRIORITY_NORMAL);
-   ResumeThread(httpClientThread);
+   //httpClientThread = CreateThread(NULL, 0, HttpClientMain, NULL, CREATE_SUSPENDED, &httpClientThreadID);
+   //SetThreadPriority(httpClientThread, THREAD_PRIORITY_NORMAL);
+   //ResumeThread(httpClientThread);
 
    while (!quit)
    {

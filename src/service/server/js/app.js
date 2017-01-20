@@ -4,7 +4,7 @@ var json = require('express-json');
 var path = require("path");
 
 var app = express();
-app.use(bodyParser());
+app.use(bodyParser.json());
 app.use(json());
 app.set("view engine", 'ejs');
 
@@ -73,6 +73,16 @@ var effect_list = {
   "9901" : {
     name : "off",
     act:"B00P00H00",
+    next:"0000"
+  },
+  "9902" : {
+    name : "full_load",
+    act:"BFFCFFFFFF003CP01H00",
+    next:"0000"
+  },
+  "9903" : {
+    name : "pump_on",
+    act:"P01",
     next:"0000"
   },
   "9999" : {
