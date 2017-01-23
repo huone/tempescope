@@ -77,12 +77,27 @@ var effect_list = {
   },
   "9902" : {
     name : "full_load",
-    act:"BFFCFFFFFF003CP01H00",
+    act:"BFFCFFFFFF003CP01H01",
     next:"0000"
   },
   "9903" : {
+    name : "half_load",
+    act:"B7FCFFFFFF003CP01H01",
+    next:"0000"
+  },
+  "9904" : {
+    name : "quarter_load",
+    act:"B3FCFFFFFF003CP01H01",
+    next:"0000"
+  },
+  "9905" : {
     name : "pump_on",
     act:"P01",
+    next:"0000"
+  },
+  "9906" : {
+    name : "humi_on",
+    act:"H01",
     next:"0000"
   },
   "9999" : {
