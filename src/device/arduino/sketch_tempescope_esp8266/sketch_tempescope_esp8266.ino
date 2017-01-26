@@ -23,7 +23,7 @@
 
 #define HOST_NAME   "192.168.124.23" //"192.168.124.23"  //"192.168.0.151"
 #define HOST_PORT   3081
-#define CLIENT_ID   "p001"
+#define CLIENT_ID   "p002"
 #define WIFI_SSID   "wifi_ap0"
 #define WIFI_PWD    "hu1huone@"
 
@@ -37,6 +37,7 @@ uint8_t buf[420] = {'0','0','0','0',0,};
 uint8_t* code_buf = buf;
 uint8_t* msg_buf = buf + 5;
 
+void WiFiEvent(WiFiEvent_t event);
 uint32_t recvEffect(WiFiClient* client, uint8_t *buffer, uint32_t buffer_size);
 uint32_t parseHexStr(const char* str, uint8_t digit);
 
@@ -60,22 +61,6 @@ struct ParserMap {
   {'D', parseDelay},
   {'R', parseRepeat}
 };
-
-void WiFiEvent(WiFiEvent_t event){
-  //Serial.printf("[WiFi-event] event: %d\n", event);
-  
-  switch(event){
-    case WIFI_EVENT_STAMODE_GOT_IP:
-      DBG_println("WiFi connected");
-      DBG_print("IP address: ");
-      DBG_println(WiFi.localIP());
-      break;
-      
-    case WIFI_EVENT_STAMODE_DISCONNECTED:
-      DBG_println("WiFi lost connection");
-      break;
-  }
-}
 
 void setup(){
   pinMode(PIN_BLINK, OUTPUT);
@@ -123,10 +108,10 @@ void setup(){
 void loop(){
   int32_t len = 0, i;
   uint8_t done = 0;
-  
+
+  digitalWrite(PIN_BLINK, HIGH);
+
   WiFiClient client;
-  
-  const int httpPort = 80;
   if (!client.connect(HOST_NAME, HOST_PORT)) {
     DBG_println("connection failed");
     return;
@@ -178,6 +163,8 @@ void loop(){
 
   client.stop();
   
+  digitalWrite(PIN_BLINK, LOW);
+  
   if(strncmp((char*)code_buf, (char*)"0000", 4) == 0)
   {
     hasNextEffect = false;
@@ -186,6 +173,22 @@ void loop(){
     delay(10000);
   } else {
     hasNextEffect = true;
+  }
+}
+
+void WiFiEvent(WiFiEvent_t event){
+  //Serial.printf("[WiFi-event] event: %d\n", event);
+  
+  switch(event){
+    case WIFI_EVENT_STAMODE_GOT_IP:
+      DBG_println("WiFi connected");
+      DBG_print("IP address: ");
+      DBG_println(WiFi.localIP());
+      break;
+      
+    case WIFI_EVENT_STAMODE_DISCONNECTED:
+      DBG_println("WiFi lost connection");
+      break;
   }
 }
 
@@ -283,6 +286,8 @@ uint32_t parseColor(void* msg){
   uint8_t c = (uint8_t)parseHexStr(&p, 2);
 
   DBG_println("parseColor()");
+
+  c = c > CNT_LED ? CNT_LED : c;
 
   for(uint8_t i = 0; i < c; i++){
     strip.setPixelColor(i + s, r, g, b);

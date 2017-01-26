@@ -4,8 +4,41 @@
     <meta charset="utf-8">
     <link rel="stylesheet" href="/stylesheets/master.css">
     <title>Welcome to my app</title>
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="tempescope/json_post.js"></script>
+    <script>
+      $(function() {
+        $.get("/tempescope/effect/list").done(function(data){
+          var arr = $.parseJSON(data)
+          $.each(arr, function(key, val){
+            $('#effectTable > tbody:last').append(
+              '<tr><td><input type="button" class="btn-delete-row" value="del"></td><td>' + key +
+              '</td><td>' + val.name +
+              '</td><td>' + val.act +
+              '</td><td>' + val.next +
+              '</td></tr>');
+          });
+
+          $('.btn-delete-row').click(function() {
+            $(this).parent().parent().remove();
+          });
+        });
+      });
+    </script>
   </head>
   <body>
     <h1>Welcome to Tempescope API!</h1>
+    <div class="effectList">
+      <table id="effectTable" border="1" cellspacing="0">
+        <tr>
+          <th></th>
+          <th>code</th>
+          <th>name</th>
+          <th>act</th>
+          <th>next</th>
+        </tr>
+        <tbody></tbody>
+      </table>
+    </div>
   </body>
 </html>

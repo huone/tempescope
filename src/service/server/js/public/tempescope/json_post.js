@@ -25,3 +25,12 @@ jQuery.fn.jsonPost = function(url){
     data: JSON.stringify(this.jsonObject())
   });
 };
+
+jQuery.fn.jsonGet = function(url, data){
+  return $.ajax({
+    url: url,
+    dataType: "json",
+    contentType: "application/json; charset=UTF-8",
+    data: JSON.stringify(data)
+  });
+};
