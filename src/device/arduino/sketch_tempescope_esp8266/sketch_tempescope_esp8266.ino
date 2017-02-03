@@ -163,14 +163,14 @@ void loop(){
 
   client.stop();
   
-  digitalWrite(PIN_BLINK, LOW);
-  
   if(strncmp((char*)code_buf, (char*)"0000", 4) == 0)
   {
     hasNextEffect = false;
+
+    digitalWrite(PIN_BLINK, LOW);
     
-    DBG_println("delay 10sec");
-    delay(10000);
+    DBG_println("delay 3sec");
+    delay(3000);
   } else {
     hasNextEffect = true;
   }

@@ -5,40 +5,183 @@
     <link rel="stylesheet" href="/stylesheets/master.css">
     <title>Welcome to my app</title>
     <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
-    <script src="tempescope/json_post.js"></script>
+    <script src="tempescope/json_http_request.js"></script>
     <script>
-      $(function() {
-        $.get("/tempescope/effect/list").done(function(data){
-          var arr = $.parseJSON(data)
+      function resetDeviceEffectList(tempescopeID){
+        $.get("/tempescopes/" + tempescopeID + "/effect/list").done(function(data){
+          var arr = $.parseJSON(data);
           $.each(arr, function(key, val){
-            $('#effectTable > tbody:last').append(
-              '<tr><td><input type="button" class="btn-delete-row" value="del"></td><td>' + key +
-              '</td><td>' + val.name +
-              '</td><td>' + val.act +
-              '</td><td>' + val.next +
-              '</td></tr>');
+            $("#effectTable > #effectList:last").append(
+              "<tr><td>" +
+              "<input type='button' class='deleteEffect' value='del'>" +
+              "<input type='button' class='setEffect' value='set'>" +
+              "</td><td>" + key +
+              "</td><td>" + val.name +
+              "</td><td>" + val.act +
+              "</td><td>" + val.next +
+              "</td></tr>");
           });
 
-          $('.btn-delete-row').click(function() {
-            $(this).parent().parent().remove();
+          $('.deleteEffect').click(function() {
+            var code = $(this).parents("tr").children("td:eq(1)").text();
+            var effectRow = $(this).parent().parent();
+            $.delete("/tempescopes/" + $("#tempescopeID > option:selected").val() + "/effects/" + code).done(function(data){
+              effectRow.remove();
+            });
+          });
+
+          $('.setEffect').click(function() {
+            var code = $(this).parents("tr").children("td:eq(1)").text();
+            $.get("/tempescopes/" + $("#tempescopeID > option:selected").val() + "/effect/" + code + "/set").done(function(data){
+              getEffect($("#tempescopeID > option:selected").val());
+            });
+          });
+        });
+      }
+
+      function resetEffectList(tempescopeID){
+        $('#effectTable > #effectList > tr').remove();
+        if(tempescopeID !== "global"){
+          $.get("/tempescope/effect/list").done(function(data){
+            var arr = $.parseJSON(data);
+            $.each(arr, function(key, val){
+              $("#effectTable > #effectList:last").append(
+                "<tr><td>" +
+                "<input type='button' class='setEffect' value='set'>" +
+                "</td><td>" + key +
+                "</td><td>" + val.name +
+                "</td><td>" + val.act +
+                "</td><td>" + val.next +
+                "</td></tr>");
+            });
+            resetDeviceEffectList(tempescopeID);
+          });
+        } else {
+          resetDeviceEffectList(tempescopeID);
+        }
+      }
+
+      function getEffect(tempescopeID){
+        $.get("/tempescopes/" + tempescopeID + "/effect").done(function(data){
+          var arr = $.parseJSON(data);
+          $("#tempescopeEffect").val(arr.name + "(" + arr.code + ")");
+        });
+      }
+
+      $(function() {
+        $.get("/tempescope/list").done(function(data){
+          var arr = $.parseJSON(data);
+          $.each(arr, function(key, val){
+            var strTag = "<option type='" + key + "'";
+            if(key === "global"){
+              strTag += "selected='selected'";
+            }
+            strTag += ">" + key + "</option>";
+            $("#tempescopeID").append(strTag);
+          });
+
+          $("#tempescopeID").change(function(){
+            var id = $("#tempescopeID > option:selected").val();
+            getEffect(id);
+            resetEffectList(id);
+          });
+
+          var id = $("#tempescopeID > option:selected").val();
+          getEffect(id);
+          resetEffectList(id);
+        });
+
+        $("#add").click(function(){
+          $("#effectAddForm > #id").val($("#tempescopeID > option:selected").val());
+          $("#effectAddForm").jsonPost("/tempescope/effect/add").done(function(data){
+            resetEffectList($("#tempescopeID > option:selected").val());
+          });
+        });
+
+        $("#update").click(function(){
+          $("#effectUpdateForm > #id").val($("#tempescopeID > option:selected").val());
+          $("#effectUpdateForm").jsonPost("/tempescope/effect/update").done(function(data){
+            resetEffectList($("#tempescopeID > option:selected").val());
           });
         });
       });
     </script>
   </head>
   <body>
-    <h1>Welcome to Tempescope API!</h1>
-    <div class="effectList">
-      <table id="effectTable" border="1" cellspacing="0">
+    <div align="center">
+      <h1>Welcome to Tempescope API!</h1>
+      <select id="tempescopeID"></select>
+      <input type="text" id="tempescopeEffect">
+      <br><br>
+      <table>
         <tr>
-          <th></th>
-          <th>code</th>
-          <th>name</th>
-          <th>act</th>
-          <th>next</th>
+          <td valign="top">
+            <div class="effectAdd" style="height:100%; width:100%;">
+              <form id="effectAddForm">
+                <input type="hidden" id="id" name="id" value="global"/>
+                <table>
+                  <tr>
+                    <td>code</td><td><input type="text" id="code" name="code" size="10" /></td>
+                  </tr>
+                  <tr>
+                    <td>name</td><td><input type="text" id="name" name="name" size="10" /></td>
+                  </tr>
+                  <tr>
+                    <td>act</td><td><input type="text" id="act" name="act" size="20" /></td>
+                  </tr>
+                  <tr>
+                    <td>next</td><td><input type="text" id="next" name="next" size="10" /></td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" align="center"><input type="button" id="add" value="add"/></td>
+                  </tr>
+                </table>
+              </form>
+            </div>
+          </td>
+          <td valign="top">
+            <div class="effectUpdate" style="height:100%; width:100%;">
+              <form id="effectUpdateForm">
+                <input type="hidden" id="id" name="id" value="global"/>
+                <table>
+                  <tr>
+                    <td>code</td><td><input type="text" id="code" name="code" size="10" /></td>
+                  </tr>
+                  <tr>
+                    <td>key</td><td><select id="key" name="key" width="10">
+                      <option value="name">name</option>
+                      <option value="act">act</option>
+                      <option value="next">next</option>
+                    </select></td>
+                  </tr>
+                  <tr>
+                    <td>value</td><td><input type="text" id="value" name="value" size="20" /></td>
+                  </tr>
+                  <tr>
+                    <td>&nbsp;</td><td>&nbsp;</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" align="center"><input type="button" id="update" value="update" /></td>
+                  </tr>
+                </table>
+              </form>
+            </div>
+          </td>
         </tr>
-        <tbody></tbody>
       </table>
+      <br>
+      <div class="effectList">
+        <table id="effectTable" class="fixed" border="1" cellspacing="0">
+          <tr>
+            <th width="80">&nbsp;</th>
+            <th width="40">code</th>
+            <th width="80">name</th>
+            <th width="340">act</th>
+            <th width="40">next</th>
+          </tr>
+          <tbody id="effectList"></tbody>
+        </table>
+      </div>
     </div>
   </body>
 </html>

@@ -32,17 +32,17 @@ function toACT(act)
 var effect_list = {
   "1101" : {
     name : "fine",
-    act:"BA0CFFFFFF003CP00H00",
+    act:"BA0CFFFFFF003CP00H00D0060",
     next:"1201"
   },
   "1201" : {
     name : "cloudy",
-    act:"B20C0000FF003CP00H01",
+    act:"B20C0000FF003CP00H01D0060",
     next:"1301"
   },
   "1301" : {
     name : "rain",
-    act:"B40CFF0000003CP01H01",
+    act:"B40CFF0000003CP01H01D0060",
     next:"1302"
   },
   "1302" : {
@@ -52,7 +52,7 @@ var effect_list = {
   },
   "1303" : {
     name : "rain-3",
-    act:"B40CFF0000003CP01H01",
+    act:"B40CFF0000003CP01H01D0060",
     next:"1304"
   },
   "1304" : {
@@ -62,7 +62,7 @@ var effect_list = {
   },
   "1305" : {
     name : "rain-5",
-      act:"B40CFF0000003CP01H01",
+      act:"B40CFF0000003CP01H01D0060",
     next:"9101"
   },
   "9101" : {
@@ -81,23 +81,38 @@ var effect_list = {
     next:"0000"
   },
   "9903" : {
-    name : "half_load",
+    name : "medium_load",
     act:"B7FCFFFFFF003CP01H01",
     next:"0000"
   },
   "9904" : {
-    name : "quarter_load",
+    name : "light_load",
     act:"B3FCFFFFFF003CP01H01",
     next:"0000"
   },
   "9905" : {
     name : "pump_on",
-    act:"P01",
+    act:"B00P01H00",
     next:"0000"
   },
   "9906" : {
     name : "humi_on",
-    act:"H01",
+    act:"B00P00H01",
+    next:"0000"
+  },
+  "9907" : {
+    name : "led_low",
+    act:"B11CFFFFFF00FFP00H00",
+    next:"0000"
+  },
+  "9908" : {
+    name : "led_middle",
+    act:"B80CFFFFFF00FFP00H00",
+    next:"0000"
+  },
+  "9909" : {
+    name : "led_high",
+    act:"BEECFFFFFF00FFP00H00",
     next:"0000"
   },
   "9999" : {
@@ -108,14 +123,10 @@ var effect_list = {
 };
 
 var tempescope_list = {
-  "00000000-0" : {effect_code : "1101", effect_list:effect_list},
-  "20161201-1" : {effect_code : "1101", effect_list:{}},
-  "20161201-2" : {effect_code : "1101", effect_list:{}}
+  "global" : {effect_code : "1101", effect_list:effect_list},
+  "p001" : {effect_code : "1101", effect_list:{}},
+  "p002" : {effect_code : "1101", effect_list:{}}
 };
-
-tempescope_list.global = tempescope_list["00000000-0"];
-tempescope_list.p001 = tempescope_list["20161201-1"];
-tempescope_list.p002 = tempescope_list["20161201-2"];
 
 app.get('/tempescope', function(req, res){
   LOG(req.url);
@@ -358,7 +369,7 @@ app.post('/tempescope/effect/update', function(req, res){
   res.json({result:"OK", message:key + " is updated in " + code + " of " + id});
 });
 
-app.get('/tempescope/effects/:code/delete', function(req, res){
+app.delete('/tempescope/effects/:code', function(req, res){
   LOG(req.url);
 
   var id = req.params.id;
@@ -374,7 +385,7 @@ app.get('/tempescope/effects/:code/delete', function(req, res){
   res.json({result:"OK", message: code + " is deleted in global"});
 });
 
-app.get('/tempescopes/:id/effects/:code/delete', function(req, res){
+app.delete('/tempescopes/:id/effects/:code', function(req, res){
   LOG(req.url);
 
   var id = req.params.id;

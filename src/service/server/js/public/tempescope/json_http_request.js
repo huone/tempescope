@@ -16,21 +16,25 @@ jQuery.fn.jsonObject = function(){
   return jsonObj;
 }
 
-jQuery.fn.jsonPost = function(url){
+jQuery.jsonPost = function(url, data){
   return $.ajax({
     type: "post",
     url: url,
     dataType: "json",
     contentType: "application/json; charset=UTF-8",
-    data: JSON.stringify(this.jsonObject())
+    data: JSON.stringify(data)
   });
 };
 
-jQuery.fn.jsonGet = function(url, data){
+jQuery.fn.jsonPost = function(url){
+  return $.jsonPost(url, this.jsonObject());
+};
+
+jQuery.delete = function(url){
   return $.ajax({
+    type: "delete",
     url: url,
     dataType: "json",
     contentType: "application/json; charset=UTF-8",
-    data: JSON.stringify(data)
   });
 };
