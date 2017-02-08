@@ -30,15 +30,20 @@ function toACT(act)
 }
 
 var effect_list = {
+  "1001" : {
+    name : "init",
+    act:"W012C BA0 P01 H01 D0030 CFF000000FF D0010 CFFA50000FF D0010 CFFFF0000FF D0010 C00800000FF D0010 C0000FF00FF D0010 C4B008200FF D0010 CEE82EE00FF D0010",
+    next:"0000"
+  },
   "1101" : {
     name : "fine",
     act:"BA0CFFFFFF003CP00H00D0060",
-    next:"1201"
+    next:"0000"
   },
   "1201" : {
     name : "cloudy",
     act:"B20C0000FF003CP00H01D0060",
-    next:"1301"
+    next:"0000"
   },
   "1301" : {
     name : "rain",
@@ -63,12 +68,12 @@ var effect_list = {
   "1305" : {
     name : "rain-5",
       act:"B40CFF0000003CP01H01D0060",
-    next:"9101"
+    next:"0000"
   },
   "9101" : {
     name : "demo",
     act:"CFFFFFF003CH01D02BCH00P01CFF00FF000FD0064C0000FF0F0FD0064CFFFF001E0FD0064C00FFFF2D0FP00D01F4CFFFFFF003CB10D0005B20D0005B30D0005B40D0005B50D0005B60D0005B70D0005B80D0005B90D0005BA0D0005B90D0005B80D0005B70D0005B60D0005B50D0005B40D0005B30D0005B20D0005R02",
-    next:"9901"
+    next:"0000"
   },
   "9901" : {
     name : "off",
@@ -91,28 +96,98 @@ var effect_list = {
     next:"0000"
   },
   "9905" : {
-    name : "pump_on",
-    act:"B00P01H00",
+    name : "pump_off",
+    act:"P00",
     next:"0000"
   },
   "9906" : {
-    name : "humi_on",
-    act:"B00P00H01",
+    name : "pump_on",
+    act:"P01",
     next:"0000"
   },
   "9907" : {
-    name : "led_low",
-    act:"B11CFFFFFF00FFP00H00",
+    name : "humi_off",
+    act:"H00",
     next:"0000"
   },
   "9908" : {
-    name : "led_middle",
-    act:"B80CFFFFFF00FFP00H00",
+    name : "humi_on",
+    act:"H01",
     next:"0000"
   },
   "9909" : {
+    name : "led_off",
+    act:"B00",
+    next:"0000"
+  },
+  "9910" : {
+    name : "led_low",
+    act:"B11",
+    next:"0000"
+  },
+  "9911" : {
+    name : "led_middle",
+    act:"B80",
+    next:"0000"
+  },
+  "9912" : {
     name : "led_high",
-    act:"BEECFFFFFF00FFP00H00",
+    act:"BEE",
+    next:"0000"
+  },
+  "9913" : {
+    name : "led_red",
+    act:"CFF000000FF",
+    next:"0000"
+  },
+  "9914" : {
+    name : "led_orange",
+    act:"CFFA50000FF",
+    next:"0000"
+  },
+  "9915" : {
+    name : "led_yellow",
+    act:"CFFFF0000FF",
+    next:"0000"
+  },
+  "9916" : {
+    name : "led_green",
+    act:"C00800000FF",
+    next:"0000"
+  },
+  "9917" : {
+    name : "led_blue",
+    act:"C0000FF00FF",
+    next:"0000"
+  },
+  "9918" : {
+    name : "led_indigo",
+    act:"C4B008200FF",
+    next:"0000"
+  },
+  "9919" : {
+    name : "led_violet",
+    act:"CEE82EE00FF",
+    next:"0000"
+  },
+  "9920" : {
+    name : "led_rainbow",
+    act:"CFF00000001 CFFA5000101 CFFFF000201 C0080000301 C0000FF0401 C4B00820501 CEE82EE0601 CFF00000701 CFFA5000801 CFFFF000901 C0080000A01 C0000FF0B01 C4B00820C01 CEE82EE0D01 CFF00000E01 CFFA5000F01 CFFFF001001 C0080001101 C0000FF1201 C4B00821301 CEE82EE1401 CFF00001501 CFFA5001601 CFFFF001701 C0080001801 C0000FF1901 C4B00821A01 CEE82EE1B01 CFF00001C01 CFFA5001D01 CFFFF001E01 C0080001F01 C0000FF2001 C4B00822101 CEE82EE2201 CFF00002301 CFFA5002401 CFFFF002501 C0080002601 C0000FF2701",
+    next:"0000"
+  },
+  "9951" : {
+    name : "set_waiting_1s",
+    act:"W0064",
+    next:"0000"
+  },
+  "9952" : {
+    name : "set_waiting_3s",
+    act:"W012C",
+    next:"0000"
+  },
+  "9953" : {
+    name : "set_waiting_10s",
+    act:"W03E8",
     next:"0000"
   },
   "9999" : {
@@ -282,7 +357,7 @@ app.post('/tempescope/effect/add', function(req, res){
 
   var tempescope = tempescope_list[id];
   if(tempescope === undefined){
-    res.json({result:"ERROR", message:id + "is wrong"});
+    res.json({result:"ERROR", message:id + " is wrong"});
     return;
   }
 
@@ -296,6 +371,14 @@ app.post('/tempescope/effect/add', function(req, res){
   if(effect !== undefined){
     res.json({result:"ERROR", message:code + " is duplicated"});
     return;
+  }
+
+  if(tempescope !== tempescope_list.global){
+    effect = tempescope_list.global.effect_list[code];
+    if(effect !== undefined){
+      res.json({result:"ERROR", message:code + " is duplicated"});
+      return;
+    }
   }
 
   var effect_name = req.body.name;

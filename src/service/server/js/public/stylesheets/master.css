@@ -9,11 +9,21 @@ table{
 }
 
 table.fixed{
-  width:560px;
+  width:600px;
   table-layout:fixed;
+  border:0px;
+}
+
+table.fixed th{
+  border:0px;
+}
+
+table.fixed tr{
+  border:0px;
 }
 
 table.fixed td{
+  border:0px;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -27,6 +37,6 @@ table.fixed td:nth-of-type(2){
   text-align:center;
 }
 
-table.fixed td:nth-of-type(5){
+table.fixed td:nth-of-type(4){
   text-align:center;
 }

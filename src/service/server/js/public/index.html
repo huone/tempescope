@@ -12,26 +12,26 @@
           var arr = $.parseJSON(data);
           $.each(arr, function(key, val){
             $("#effectTable > #effectList:last").append(
-              "<tr><td>" +
-              "<input type='button' class='deleteEffect' value='del'>" +
-              "<input type='button' class='setEffect' value='set'>" +
-              "</td><td>" + key +
+              "<tr><td>"  + key +
               "</td><td>" + val.name +
               "</td><td>" + val.act +
               "</td><td>" + val.next +
+              "</td><td>" +
+                "<input type='button' class='deleteEffect' value='del'>" +
+                "<input type='button' class='setEffect' value='set'>" +
               "</td></tr>");
           });
 
-          $('.deleteEffect').click(function() {
-            var code = $(this).parents("tr").children("td:eq(1)").text();
+          $(".deleteEffect").click(function(){
+            var code = $(this).parents("tr").children("td:eq(0)").text();
             var effectRow = $(this).parent().parent();
             $.delete("/tempescopes/" + $("#tempescopeID > option:selected").val() + "/effects/" + code).done(function(data){
               effectRow.remove();
             });
           });
 
-          $('.setEffect').click(function() {
-            var code = $(this).parents("tr").children("td:eq(1)").text();
+          $(".setEffect").click(function(){
+            var code = $(this).parents("tr").children("td:eq(0)").text();
             $.get("/tempescopes/" + $("#tempescopeID > option:selected").val() + "/effect/" + code + "/set").done(function(data){
               getEffect($("#tempescopeID > option:selected").val());
             });
@@ -40,18 +40,18 @@
       }
 
       function resetEffectList(tempescopeID){
-        $('#effectTable > #effectList > tr').remove();
+        $("#effectTable > #effectList > tr").remove();
         if(tempescopeID !== "global"){
           $.get("/tempescope/effect/list").done(function(data){
             var arr = $.parseJSON(data);
             $.each(arr, function(key, val){
               $("#effectTable > #effectList:last").append(
-                "<tr><td>" +
-                "<input type='button' class='setEffect' value='set'>" +
-                "</td><td>" + key +
+                "<tr><td>"  + key +
                 "</td><td>" + val.name +
                 "</td><td>" + val.act +
                 "</td><td>" + val.next +
+                "</td><td>" +
+                  "<input type='button' class='setEffect' value='set'>" +
                 "</td></tr>");
             });
             resetDeviceEffectList(tempescopeID);
@@ -68,7 +68,7 @@
         });
       }
 
-      $(function() {
+      $(function(){
         $.get("/tempescope/list").done(function(data){
           var arr = $.parseJSON(data);
           $.each(arr, function(key, val){
@@ -94,14 +94,22 @@
         $("#add").click(function(){
           $("#effectAddForm > #id").val($("#tempescopeID > option:selected").val());
           $("#effectAddForm").jsonPost("/tempescope/effect/add").done(function(data){
-            resetEffectList($("#tempescopeID > option:selected").val());
+            if(data.result === "OK"){
+              resetEffectList($("#tempescopeID > option:selected").val());
+            } else {
+              alert(data.message);
+            }
           });
         });
 
         $("#update").click(function(){
           $("#effectUpdateForm > #id").val($("#tempescopeID > option:selected").val());
           $("#effectUpdateForm").jsonPost("/tempescope/effect/update").done(function(data){
-            resetEffectList($("#tempescopeID > option:selected").val());
+            if(data.result === "OK"){
+              resetEffectList($("#tempescopeID > option:selected").val());
+            } else {
+              alert(data.message);
+            }
           });
         });
       });
@@ -173,11 +181,11 @@
       <div class="effectList">
         <table id="effectTable" class="fixed" border="1" cellspacing="0">
           <tr>
-            <th width="80">&nbsp;</th>
             <th width="40">code</th>
-            <th width="80">name</th>
+            <th width="100">name</th>
             <th width="340">act</th>
             <th width="40">next</th>
+            <th width="80">&nbsp;</th>
           </tr>
           <tbody id="effectList"></tbody>
         </table>

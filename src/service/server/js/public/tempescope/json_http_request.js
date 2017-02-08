@@ -14,7 +14,7 @@ jQuery.fn.jsonObject = function(){
   }
 
   return jsonObj;
-}
+};
 
 jQuery.jsonPost = function(url, data){
   return $.ajax({

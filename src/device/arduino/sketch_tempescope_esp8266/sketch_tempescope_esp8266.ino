@@ -1,13 +1,13 @@
-#define DBG_LOG_SERIAL
+//#define DBG_LOG_SERIAL
 
 #ifdef DBG_LOG_SERIAL
-#define DBG_print(_MSG_)            {Serial.print(_MSG_);}
-#define DBG_println(_MSG_)          {Serial.print(_MSG_);Serial.print("\r\n");}
-#define DBG_printChar(_MSG_, _LEN_) {for(uint32_t i = 0; i < len; i++){Serial.print((char)_MSG_[i]);}}
+#define DBG_print(_MSG_)            do{Serial.print(_MSG_);}while(0)
+#define DBG_println(_MSG_)          do{Serial.print(_MSG_);Serial.print("\r\n");}while(0)
+#define DBG_printChar(_MSG_, _LEN_) do{for(uint32_t i = 0; i < len; i++){Serial.print((char)_MSG_[i]);}}while(0)
 #else
-#define DBG_print(_MSG_)            do{}while(0);
-#define DBG_println(_MSG_, _NL_)    do{}while(0);
-#define DBG_printChar(_MSG_, _LEN_) do{}while(0);
+#define DBG_print(_MSG_)            do{}while(0)
+#define DBG_println(_MSG_)          do{}while(0)
+#define DBG_printChar(_MSG_, _LEN_) do{}while(0)
 #endif
 
 #include <ESP8266WiFi.h>
@@ -30,10 +30,11 @@
 Adafruit_NeoPixel strip(CNT_LED, PIN_LED, NEO_GRB + NEO_KHZ800);
 
 char* httpReq = "GET /tempescopes/%s/%s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n";
-bool hasNextEffect = false;
+bool hasNextEffect = true;
 
+uint32_t waiting_time_ms = 10000;
 uint8_t effectRepeat = 0;
-uint8_t buf[420] = {'0','0','0','0',0,};
+uint8_t buf[1024] = {'1','0','0','1',0,};
 uint8_t* code_buf = buf;
 uint8_t* msg_buf = buf + 5;
 
@@ -41,7 +42,7 @@ void WiFiEvent(WiFiEvent_t event);
 uint32_t recvEffect(WiFiClient* client, uint8_t *buffer, uint32_t buffer_size);
 uint32_t parseHexStr(const char* str, uint8_t digit);
 
-#define CNT_PARSER  6
+#define CNT_PARSER  7
 typedef uint32_t (*parser_t)(void*);
 uint32_t parseColor(void* msg);
 uint32_t parseBrightness(void* msg);
@@ -49,6 +50,7 @@ uint32_t parsePump(void* msg);
 uint32_t parseHumidifier(void* msg);
 uint32_t parseDelay(void* msg);
 uint32_t parseRepeat(void* msg);
+uint32_t parseWaiting(void* msg);
 
 struct ParserMap {
   char idChar;
@@ -59,7 +61,8 @@ struct ParserMap {
   {'P', parsePump},
   {'H', parseHumidifier},
   {'D', parseDelay},
-  {'R', parseRepeat}
+  {'R', parseRepeat},
+  {'W', parseWaiting}
 };
 
 void setup(){
@@ -68,6 +71,7 @@ void setup(){
   pinMode(PIN_PUMP, OUTPUT);
   pinMode(PIN_HUMI, OUTPUT);
 
+  digitalWrite(PIN_BLINK, HIGH);
   tone(PIN_SPK, 800, 200);
   strip.begin();
 
@@ -103,6 +107,8 @@ void setup(){
   }
   
   DBG_print("\r\n");
+
+  digitalWrite(PIN_BLINK, LOW);
 }
 
 void loop(){
@@ -169,8 +175,10 @@ void loop(){
 
     digitalWrite(PIN_BLINK, LOW);
     
-    DBG_println("delay 3sec");
-    delay(3000);
+    DBG_print("wait for ");
+    DBG_print(waiting_time_ms);
+    DBG_println(" ms");
+    delay(waiting_time_ms);
   } else {
     hasNextEffect = true;
   }
@@ -302,7 +310,7 @@ uint32_t parseBrightness(void* msg){
   static uint8_t LEN_MSG = 2;
   
   const char* p = (const char*)msg;
-  uint8_t v = (uint8_t)parseHexStr(&p, 2);
+  uint8_t v = (uint8_t)parseHexStr(&p, LEN_MSG);
 
   DBG_println("parseBrightness()");
   
@@ -316,7 +324,7 @@ uint32_t parsePump(void* msg){
   static uint8_t LEN_MSG = 2;
   
   const char* p = (const char*)msg;
-  uint8_t v = (uint8_t)parseHexStr(&p, 2);
+  uint8_t v = (uint8_t)parseHexStr(&p, LEN_MSG);
 
   DBG_println("parsePump()");
   
@@ -329,7 +337,7 @@ uint32_t parseHumidifier(void* msg){
   static uint8_t LEN_MSG = 2;
   
   const char* p = (const char*)msg;
-  uint8_t v = (uint8_t)parseHexStr(&p, 2);
+  uint8_t v = (uint8_t)parseHexStr(&p, LEN_MSG);
 
   DBG_println("parseHumidifier()");
 
@@ -342,7 +350,7 @@ uint32_t parseDelay(void* msg){
   static uint8_t LEN_MSG = 4;
   
   const char* p = (const char*)msg;
-  uint16_t v = (uint16_t)parseHexStr(&p, 4);
+  uint16_t v = (uint16_t)parseHexStr(&p, LEN_MSG);
 
   DBG_println("parseDelay()");
 
@@ -355,11 +363,24 @@ uint32_t parseRepeat(void* msg){
   static uint8_t LEN_MSG = 2;
   
   const char* p = (const char*)msg;
-  uint8_t v = (uint8_t)parseHexStr(&p, 2);
+  uint8_t v = (uint8_t)parseHexStr(&p, LEN_MSG);
 
   DBG_println("parseRepeat()");
 
   effectRepeat = v;
+  
+  return LEN_MSG;
+}
+
+uint32_t parseWaiting(void* msg){
+  static uint8_t LEN_MSG = 4;
+  
+  const char* p = (const char*)msg;
+  uint16_t v = (uint16_t)parseHexStr(&p, LEN_MSG);
+
+  DBG_println("parseWaiting()");
+
+  waiting_time_ms = (uint32_t)v * 10;
   
   return LEN_MSG;
 }
