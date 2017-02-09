@@ -47,26 +47,31 @@ var effect_list = {
   },
   "1301" : {
     name : "rain",
+    act:"B40CFF0000003CP01H00D0060",
+    next:"0000"
+  },
+  "1302" : {
+    name : "rain-anim",
     act:"B40CFF0000003CP01H01D0060",
     next:"1302"
   },
-  "1302" : {
-    name : "rain-2",
-    act:"B10 CFFFFFF003C B10D0001 B50D0005 BC0D0003 B50D0002 BA0D0001 B30D0002 R05",
+  "1303" : {
+    name : "rain-anim-2",
+    act:"H00 B10 CFFFFFF003C B10D0001 B50D0005 BC0D0003 B50D0002 BA0D0001 B30D0002 R05",
     next:"1303"
   },
-  "1303" : {
-    name : "rain-3",
+  "1304" : {
+    name : "rain-anim-3",
     act:"B40CFF0000003CP01H01D0060",
     next:"1304"
   },
-  "1304" : {
-    name : "rain-4",
-    act:"B10 CFFFFFF003C D0003 BC0D0003 B50D0002 BA0D0001 B30D0002 R03",
+  "1305" : {
+    name : "rain-anim-4",
+    act:"P00 B10 CFFFFFF003C D0003 BC0D0003 B50D0002 BA0D0001 B30D0002 R03",
     next:"1305"
   },
-  "1305" : {
-    name : "rain-5",
+  "1306" : {
+    name : "rain-anim-5",
       act:"B40CFF0000003CP01H01D0060",
     next:"0000"
   },
