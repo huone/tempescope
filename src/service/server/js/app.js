@@ -2,11 +2,13 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var json = require('express-json');
 var path = require("path");
+var http = require("http");
+var xmlParser = require('xml-parser');
 
 var app = express();
 app.use(bodyParser.json());
 app.use(json());
-app.set("view engine", 'ejs');
+app.set("view engine", "ejs");
 
 /*
 app.use(function(req, res, next){
@@ -30,6 +32,11 @@ function toACT(act)
 }
 
 var effect_list = {
+  "1000" : {
+    name : "KMS RSS",
+    act:"",
+    next:"0000"
+  },
   "1001" : {
     name : "init",
     act:"W012C BA0 P01 H01 D0030 CFF000000FF D0010 CFFA50000FF D0010 CFFFF0000FF D0010 C00800000FF D0010 C0000FF00FF D0010 C4B008200FF D0010 CEE82EE00FF D0010",
@@ -53,22 +60,22 @@ var effect_list = {
   "1302" : {
     name : "rain-anim",
     act:"B40CFF0000003CP01H01D0060",
-    next:"1302"
+    next:"1303"
   },
   "1303" : {
     name : "rain-anim-2",
     act:"H00 B10 CFFFFFF003C B10D0001 B50D0005 BC0D0003 B50D0002 BA0D0001 B30D0002 R05",
-    next:"1303"
+    next:"1304"
   },
   "1304" : {
     name : "rain-anim-3",
     act:"B40CFF0000003CP01H01D0060",
-    next:"1304"
+    next:"1305"
   },
   "1305" : {
     name : "rain-anim-4",
     act:"P00 B10 CFFFFFF003C D0003 BC0D0003 B50D0002 BA0D0001 B30D0002 R03",
-    next:"1305"
+    next:"1306"
   },
   "1306" : {
     name : "rain-anim-5",
@@ -181,13 +188,13 @@ var effect_list = {
     next:"0000"
   },
   "9951" : {
-    name : "set_waiting_1s",
-    act:"W0064",
+    name : "set_waiting_3s",
+    act:"W012C",
     next:"0000"
   },
   "9952" : {
-    name : "set_waiting_3s",
-    act:"W012C",
+    name : "set_waiting_5s",
+    act:"W01F4",
     next:"0000"
   },
   "9953" : {
@@ -203,10 +210,79 @@ var effect_list = {
 };
 
 var tempescope_list = {
-  "global" : {effect_code : "1101", effect_list:effect_list},
-  "p001" : {effect_code : "1101", effect_list:{}},
-  "p002" : {effect_code : "1101", effect_list:{}}
+  "global" : {effect_code : "1000", effect_list:effect_list}
 };
+
+var kmaRssReqOptions = {
+  host : "www.kma.go.kr",
+  port : 80,
+  path : "/wid/queryDFSRSS.jsp?zone=2723067100"
+};
+
+function findElement(element, tagName){
+  var foundElement;
+  element.children.forEach(function(value, index, array1){
+    if(value.name === tagName){
+      foundElement = value;
+      return false;
+    }
+  });
+
+  return foundElement;
+}
+
+function setWeatherFromKma(){
+  http.get(kmaRssReqOptions, function(res){
+    var serverData = "";
+    res.on("data", function(chunk){
+      serverData += chunk;
+    });
+
+    res.on("end", function(){
+      var kmaRss = xmlParser(serverData);
+
+      var tagHierarchy = ["channel", "item", "description", "body", "data", "wfEn"];
+      var element = kmaRss.root;
+
+      tagHierarchy.forEach(function(value, index, array1){
+        element = findElement(element, value);
+        if( element === undefined){
+          return false;
+        }
+      });
+
+      if( element === undefined){
+        LOG("KMA RSS Error");
+      }
+
+      LOG("KMA RSS : " + element.content);
+
+      var effect_code = "9999";
+      switch(element.content){
+        case "Clear":
+          effect_code = "1101";
+          break;
+        case "Partly Cloudy":
+        case "Mostly Cloudy":
+        case "Cloudy":
+          effect_code = "1201";
+          break;
+        case "Rain":
+        case "Snow/Rain":
+        case "Snow":
+          effect_code = "1301";
+          break;
+      }
+
+      if(effect_list[effect_code] !== undefined){
+        effect_list["1000"].act = effect_list[effect_code].act;
+      }
+    });
+  });
+}
+
+setWeatherFromKma();
+setInterval(setWeatherFromKma, 3600000);
 
 app.get('/tempescope', function(req, res){
   LOG(req.url);
@@ -307,16 +383,20 @@ app.get('/tempescopes/:id/effects/:code', function(req, res){
   var tempescope = tempescope_list[id];
 
   if(tempescope === undefined){
-    code = "9999";
+    if(code === "1001"){
+      tempescope = {effect_code : "1000", effect_list:{}};
+      tempescope_list[id] = tempescope;
+    } else {
+      tempescope = tempescope_list.global;
+    }
+  }
+
+  effect = tempescope.effect_list[code];
+  if(effect === undefined){
     effect = tempescope_list.global.effect_list[code];
-  } else {
-    effect = tempescope.effect_list[code];
     if(effect === undefined){
+      code = "9999";
       effect = tempescope_list.global.effect_list[code];
-      if(effect === undefined){
-        code = "9999";
-        effect = tempescope_list.global.effect_list[code];
-      }
     }
   }
 

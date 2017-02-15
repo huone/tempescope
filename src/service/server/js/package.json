@@ -13,9 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.14.0",
-    "ejs": "^2.5.5",
     "body-parser": "^1.15.2",
-    "express-json": "^1.0.0"
+    "ejs": "^2.5.5",
+    "express": "^4.14.0",
+    "express-json": "^1.0.0",
+    "xml-parser": "^1.2.1"
   }
 }
