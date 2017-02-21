@@ -221,11 +221,13 @@ var kmaRssReqOptions = {
 
 function findElement(element, tagName){
   var foundElement;
-  element.children.forEach(function(value, index, array1){
+  element.children.some(function(value, index, array1){
     if(value.name === tagName){
       foundElement = value;
-      return false;
+      return true;
     }
+
+    return false;
   });
 
   return foundElement;
